@@ -3,6 +3,7 @@ use std::path::Path;
 mod d1;
 mod d2;
 mod d3;
+mod d4;
 
 pub fn read_input(name: &str) -> String {
     let pb = Path::new("inputs").join(name);
@@ -13,5 +14,6 @@ pub fn read_input(name: &str) -> String {
 fn main() {
     // d1::process();
     // d2::process();
-    d3::process();
+    // d3::process();
+    d4::process();
 }

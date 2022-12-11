@@ -1,0 +1,151 @@
+use std::collections::{HashMap, VecDeque};
+
+#[derive(Debug, Default)]
+struct File {
+    size: u32,
+    name: String,
+}
+
+#[derive(Debug, Default)]
+struct Folder {
+    name: String,
+
+    files: Vec<File>,
+
+    folders: HashMap<String, Self>,
+}
+
+impl Folder {
+    pub fn get_size(&self) -> u32 {
+        let mut total_size: u32 = 0;
+
+        for file in self.files.iter() {
+            total_size += file.size;
+        }
+
+        for (_, folder) in self.folders.iter() {
+            total_size += folder.get_size();
+        }
+
+        total_size
+    }
+
+    pub fn cd<T, R>(&self, names: T) -> Option<&Self>
+    where
+        T: Iterator<Item = R>,
+        R: Into<String>,
+    {
+        let mut current: Option<&Self> = Some(self);
+
+        for name in names {
+            let name = name.into();
+            current = match current {
+                Some(f) => f.folders.get(&name),
+                None => None,
+            }
+        }
+
+        current
+    }
+
+    pub fn cd_mut<T, R>(&mut self, names: T) -> Option<&mut Self>
+    where
+        T: Iterator<Item = R>,
+        R: Into<String>,
+    {
+        let mut current: Option<&mut Self> = Some(self);
+
+        for name in names {
+            let name = name.into();
+            current = match current {
+                Some(f) => f.folders.get_mut(&name),
+                None => None,
+            }
+        }
+
+        current
+    }
+
+    pub fn mkdir<T, R>(&mut self, parents: T) -> &mut Self
+    where
+        T: Iterator<Item = R>,
+        R: Into<String>,
+    {
+        let mut current = self;
+
+        for name in parents {
+            let name = name.into();
+
+            if let Some(sub) = current.folders.get_mut(&name) {
+                current = sub;
+                continue;
+            }
+
+            // current = match current.folders.get_mut(&name) {
+            //     Some(f) => f,
+            //     None => {
+            //         current.folders.insert(
+            //             name.to_owned(),
+            //             Folder {
+            //                 name: name.to_owned(),
+            //                 ..Default::default()
+            //             },
+            //         );
+            //
+            //         current.folders.get_mut(&name).unwrap()
+            //     }
+            // }
+        }
+
+        current
+    }
+}
+
+pub fn process() {
+    let input = crate::read_input("d7_example.txt");
+    let lines = input.lines().peekable();
+
+    let mut root = Folder {
+        name: "/".into(),
+        ..Default::default()
+    };
+    let mut current_dir = <VecDeque<String>>::new();
+
+    for line in lines {
+        println!("line: {}", line);
+
+        if line.starts_with("$") {
+            match line.replace("$ ", "").as_str() {
+                "ls" => {}
+                // cd <dir>
+                l if l.starts_with("cd ") => {
+                    let dir = l.replace("cd ", "");
+                    if dir == ".." {
+                        current_dir.pop_back();
+                    } else {
+                        current_dir.push_back(dir);
+                        root.mkdir(current_dir.iter());
+                    }
+                    println!("\tcurrent_dir: {:?}", current_dir);
+                }
+                _ => {}
+            }
+            continue;
+        }
+
+        let ret = line.split_whitespace().collect::<Vec<&str>>();
+
+        let mut folder = root.cd(current_dir.iter()).unwrap();
+
+        let filename = ret[1];
+
+        if let Ok(size) = ret[0].parse::<u32>() {
+            folder.files.push(File {
+                size: size,
+                name: filename.to_owned(),
+            })
+        }
+
+        // println!("\tsizes: {:?}", dir_sizes);
+    }
+}
